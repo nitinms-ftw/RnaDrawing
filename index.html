@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RNA Playground — Predict, Visualize & Learn RNA Structure</title>
+    <meta name="description" content="The first browser-based RNA structure predictor and educational tool. Predict secondary structures with Nussinov algorithm, visualize with D3.js, learn through interactive challenges.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <!-- D3.js v7 -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <!-- App CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-layout">
+
+        <!-- ── Header ────────────────────────────────────── -->
+        <header class="app-header">
+            <div class="app-title">
+                <span class="icon">🧬</span>
+                <span>RNA Playground</span>
+                <span class="app-subtitle">Predict · Visualize · Learn</span>
+            </div>
+            <div class="toolbar">
+                <div class="toolbar-group">
+                    <button class="btn btn-toolbar" id="undo-btn" disabled title="Undo (Ctrl+Z)">↩ Undo</button>
+                    <button class="btn btn-toolbar" id="redo-btn" disabled title="Redo (Ctrl+Shift+Z)">↪ Redo</button>
+                </div>
+                <div class="toolbar-group">
+                    <button class="btn btn-toolbar" id="export-svg-btn" title="Export SVG">📥 SVG</button>
+                    <button class="btn btn-toolbar" id="export-png-btn" title="Export PNG">🖼 PNG</button>
+                </div>
+                <div class="toolbar-group">
+                    <span style="font-size:11px; opacity:0.6;">B=Bond · +/−=Zoom · 0=Reset</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- ── Sidebar ───────────────────────────────────── -->
+        <aside class="sidebar">
+
+            <!-- Input Panel -->
+            <div class="panel">
+                <div class="panel-header">📝 Input</div>
+                <div class="panel-body">
+                    <div class="input-group">
+                        <label for="sequence-input">RNA Sequence</label>
+                        <input type="text" id="sequence-input"
+                               placeholder="e.g. GGCGCAUUUUGCGCC..."
+                               spellcheck="false" autocomplete="off">
+                    </div>
+                    <div class="input-group">
+                        <label for="structure-input">Dot-Bracket <span class="muted">(optional — or use Predict)</span></label>
+                        <input type="text" id="structure-input"
+                               placeholder="e.g. (((((.....)))))...."
+                               spellcheck="false" autocomplete="off">
+                    </div>
+                    <div id="input-error" class="input-error"></div>
+                    <div class="input-actions">
+                        <button class="btn btn-primary" id="visualize-btn">▶ Visualize</button>
+                        <button class="btn btn-predict" id="predict-btn" title="Predict structure using Nussinov algorithm">🔮 Predict</button>
+                        <button class="btn btn-outline btn-sm" id="validate-btn" title="Validate structure">✓</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Examples -->
+            <div class="panel">
+                <div class="panel-header">📚 Examples</div>
+                <div class="panel-body">
+                    <div class="example-grid">
+                        <button class="example-btn" data-example="hairpin"><span class="example-icon">🔁</span> Hairpin</button>
+                        <button class="example-btn" data-example="twoStems"><span class="example-icon">🔀</span> Two Stems</button>
+                        <button class="example-btn" data-example="internalLoop"><span class="example-icon">⭕</span> Int. Loop</button>
+                        <button class="example-btn" data-example="pseudoFree"><span class="example-icon">➰</span> Free</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tools -->
+            <div class="panel">
+                <div class="panel-header">🔧 Tools</div>
+                <div class="panel-body">
+                    <button class="btn btn-bond" id="bond-mode-btn">🔗 Bond Mode</button>
+                    <div id="bond-status" class="bond-status"></div>
+                </div>
+            </div>
+
+            <!-- Energy Display -->
+            <div class="panel" id="energy-panel-wrapper" style="display:none">
+                <div class="panel-header">⚡ Energy</div>
+                <div class="panel-body" id="energy-panel"></div>
+            </div>
+
+            <!-- Statistics -->
+            <div class="panel">
+                <div class="panel-header">📊 Statistics</div>
+                <div class="panel-body" id="stats-panel"><p class="muted">No sequence loaded</p></div>
+            </div>
+
+            <!-- Dot-Bracket -->
+            <div class="panel">
+                <div class="panel-header">🧮 Dot-Bracket</div>
+                <div class="panel-body" id="dotbracket-display"><p class="muted">No structure</p></div>
+            </div>
+
+            <!-- Validation -->
+            <div class="panel">
+                <div class="panel-header">🔬 Validation</div>
+                <div class="panel-body" id="validation-panel"><p class="muted">Click ✓ to validate</p></div>
+            </div>
+
+            <!-- Legend -->
+            <div class="panel">
+                <div class="panel-header">🎨 Legend</div>
+                <div class="panel-body" id="legend-panel"></div>
+            </div>
+        </aside>
+
+        <!-- ── Main Canvas Area ──────────────────────────── -->
+        <main class="canvas-area">
+            <!-- Tab Bar -->
+            <div class="canvas-tabs">
+                <button class="canvas-tab active" data-tab="structure">🧬 Structure</button>
+                <button class="canvas-tab" data-tab="algorithm">📖 Algorithm</button>
+                <button class="canvas-tab" data-tab="challenge">🎮 Challenge</button>
+            </div>
+
+            <!-- Tab: Structure (force-directed graph) -->
+            <div class="tab-content active" id="tab-structure">
+                <div id="rna-canvas"></div>
+                <div class="color-scheme-control">
+                    <select id="color-scheme" title="Color scheme">
+                        <option value="base">Color by Base</option>
+                        <option value="position">Color by Position</option>
+                        <option value="structure">Color by Structure</option>
+                    </select>
+                </div>
+                <div class="canvas-controls">
+                    <button class="btn" id="zoom-in-btn" title="Zoom in">+</button>
+                    <button class="btn" id="zoom-out-btn" title="Zoom out">−</button>
+                    <button class="btn" id="zoom-reset-btn" title="Reset">⟲</button>
+                </div>
+            </div>
+
+            <!-- Tab: Algorithm (DP matrix visualization) -->
+            <div class="tab-content" id="tab-algorithm">
+                <div class="algo-container">
+                    <div class="algo-controls">
+                        <button class="btn btn-sm btn-primary" id="algo-play-btn">▶ Play</button>
+                        <button class="btn btn-sm btn-outline" id="algo-pause-btn">⏸ Pause</button>
+                        <button class="btn btn-sm btn-outline" id="algo-step-btn">⏭ Step</button>
+                        <button class="btn btn-sm btn-outline" id="algo-skip-btn">⏩ Complete</button>
+                        <button class="btn btn-sm btn-outline" id="algo-reset-btn">⟲ Reset</button>
+                        <div class="algo-speed">
+                            <label>Speed:</label>
+                            <input type="range" id="algo-speed-slider" min="10" max="500" value="80" step="10">
+                            <span id="algo-speed-label">80ms</span>
+                        </div>
+                    </div>
+                    <div class="algo-info-bar" id="algo-info-bar">
+                        <span class="muted">Run a prediction first, then watch the algorithm work step-by-step.</span>
+                    </div>
+                    <div class="algo-step-detail" id="algo-step-detail"></div>
+                    <div class="algo-matrix-container" id="algo-matrix-container">
+                        <div class="algo-placeholder">
+                            <div class="algo-placeholder-icon">📖</div>
+                            <h3>Nussinov Algorithm Visualization</h3>
+                            <p>Enter a sequence and click <strong>🔮 Predict</strong> to see the dynamic programming matrix fill in step-by-step.</p>
+                            <p class="muted">The matrix shows the maximum number of base pairs achievable for each subsequence (i,j).</p>
+                        </div>
+                    </div>
+                    <div class="algo-legend">
+                        <span class="algo-legend-item"><span class="algo-swatch" style="background:#F8F9FA;border:1px solid #DEE2E6"></span> Empty</span>
+                        <span class="algo-legend-item"><span class="algo-swatch" style="background:#3498DB"></span> Filled</span>
+                        <span class="algo-legend-item"><span class="algo-swatch" style="background:#F39C12"></span> Current</span>
+                        <span class="algo-legend-item"><span class="algo-swatch" style="background:#2ECC71"></span> Paired</span>
+                        <span class="algo-legend-item"><span class="algo-swatch" style="background:#E74C3C"></span> Traceback</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Challenge (puzzles) -->
+            <div class="tab-content" id="tab-challenge">
+                <div class="challenge-container" id="challenge-container">
+                    <!-- Rendered by ChallengeMode -->
+                </div>
+            </div>
+        </main>
+
+        <!-- ── Footer ────────────────────────────────────── -->
+        <footer class="app-footer">
+            <div id="message-bar" class="message-bar">
+                Welcome to RNA Playground! Enter a sequence and click 🔮 Predict to see structure prediction in action.
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts (order matters) -->
+    <script src="js/rna-model.js"></script>
+    <script src="js/rna-renderer.js"></script>
+    <script src="js/nussinov.js"></script>
+    <script src="js/algorithm-viz.js"></script>
+    <script src="js/challenge.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
