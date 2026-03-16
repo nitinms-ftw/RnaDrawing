@@ -1,0 +1,31 @@
+# Netlify configuration for RNA Playground
+
+[build]
+  publish = "."
+  # No build command needed — pure static site
+
+# Security headers (applied to all pages)
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Prevent clickjacking (don't allow embedding in iframes)
+    X-Frame-Options = "SAMEORIGIN"
+    # Prevent MIME type sniffing
+    X-Content-Type-Options = "nosniff"
+    # Enable browser XSS protection
+    X-XSS-Protection = "1; mode=block"
+    # Referrer policy
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    # Cache static assets for 1 day (they rarely change)
+    Cache-Control = "public, max-age=86400"
+
+# Cache JS/CSS longer (1 week)
+[[headers]]
+  for = "/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/css/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
