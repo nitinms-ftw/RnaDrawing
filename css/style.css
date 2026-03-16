@@ -109,9 +109,9 @@ body {
 .input-group input::placeholder { color: #B0B8C1; font-style: italic; }
 .input-error { font-size: 11px; color: var(--error); margin-top: 4px; min-height: 14px; opacity: 0; transition: opacity 0.2s; }
 .input-error.visible { opacity: 1; }
-.input-actions { display: flex; gap: 6px; }
-.input-actions .btn { flex: 1; justify-content: center; }
-.input-actions .btn-sm { flex: 0; }
+.input-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.input-actions .btn { flex: 1; justify-content: center; min-width: 0; padding: 8px 10px; font-size: 12px; }
+.input-actions .btn-sm { flex: 0 0 auto; }
 
 /* ── Examples ─────────────────────────────────────────── */
 .example-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
