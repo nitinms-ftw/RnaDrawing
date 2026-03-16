@@ -27,6 +27,7 @@
     let predictor = null;
     let algoViz = null;
     let challengeMode = null;
+    let onboarding = null;
     let bondMode = false;
     let bondFirstNode = null;
     let undoStack = [];
@@ -43,6 +44,10 @@
         initAlgoViz();
         initChallenge();
         loadExample('hairpin');
+
+        // Onboarding — show on first visit
+        onboarding = new Onboarding();
+        onboarding.showIfFirstVisit();
     }
 
     function cacheDom() {
@@ -118,6 +123,11 @@
         dom.seqInput.addEventListener('input', liveValidate);
         dom.structInput.addEventListener('input', liveValidate);
         document.addEventListener('keydown', handleKeyboard);
+
+        // Help button reopens onboarding
+        document.getElementById('help-btn').addEventListener('click', () => {
+            if (onboarding) onboarding.show();
+        });
     }
 
     // ── Tab Switching ────────────────────────────────────────────
